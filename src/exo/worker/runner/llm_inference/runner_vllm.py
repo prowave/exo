@@ -364,8 +364,16 @@ class VllmRunner:
             payload["temperature"] = params.temperature
         if params.top_p is not None:
             payload["top_p"] = params.top_p
-        if params.stop:
-            payload["stop"] = params.stop
+        # Merge caller-supplied stops with common end-of-turn tokens so vLLM
+        # always halts at turn boundaries regardless of which model is loaded.
+        eot_stop_strings = [
+            "<|eot_id|>",       # Llama 3.x
+            "<|end_of_text|>",  # Llama 3.x
+            "<|im_end|>",       # Qwen / ChatML
+            "<|endoftext|>",    # GPT-2 / Falcon
+        ]
+        stop_strings = list(dict.fromkeys(list(params.stop or []) + eot_stop_strings))
+        payload["stop"] = stop_strings
 
         try:
             with httpx.Client(timeout=None) as client, client.stream(
