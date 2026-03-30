@@ -56,6 +56,13 @@ dev = [
 # For Vulkan GPU support on Linux, reinstall with:
 #   CMAKE_ARGS="-DGGML_VULKAN=on" uv pip install llama-cpp-python --force-reinstall --no-build-isolation
 # The CPU-only default wheel works as a fallback.
+#
+# vLLM + Ray enable true pipeline-parallel memory distribution across nodes.
+# Install after the ROCm llama-cpp-python step:
+#   uv pip install vllm "ray[default]"
+# If you hit a ROCm/CUDA wheel mismatch:
+#   uv pip install vllm --extra-index-url https://download.pytorch.org/whl/rocm6.2
+#   uv pip install "ray[default]"
 rocm = ["llama-cpp-python>=0.3.0"]
 vulkan = ["llama-cpp-python>=0.3.0"]
 

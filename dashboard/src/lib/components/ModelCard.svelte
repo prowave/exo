@@ -578,7 +578,11 @@
           ? "Ring: standard networking. Works over any connection (Wi-Fi, Ethernet, Thunderbolt)."
           : runtime === "MlxJaccl"
             ? "RDMA: direct memory access over Thunderbolt. Significantly faster for multi-device inference."
-            : "llama.cpp RPC: distributed inference over TCP/IP using llama.cpp's RPC protocol."}
+            : runtime === "LlamaCppRpc"
+              ? "llama.cpp RPC: distributed inference over TCP/IP using llama.cpp's RPC protocol."
+              : runtime === "Vllm"
+                ? "vLLM Pipeline: true pipeline-parallel memory distribution across nodes using vLLM + Ray."
+                : ""}
       >
         {runtime === "MlxRing"
           ? "MLX Ring"
@@ -586,7 +590,9 @@
             ? "MLX RDMA"
             : runtime === "LlamaCppRpc"
               ? "llama.cpp RPC"
-              : runtime}
+              : runtime === "Vllm"
+                ? "vLLM Pipeline"
+                : runtime}
       </span>
     </div>
 

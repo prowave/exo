@@ -885,7 +885,7 @@
   }
 
   let selectedSharding = $state<"Pipeline" | "Tensor">("Pipeline");
-  type InstanceMeta = "MlxRing" | "MlxJaccl" | "LlamaCppRpc";
+  type InstanceMeta = "MlxRing" | "MlxJaccl" | "LlamaCppRpc" | "Vllm";
 
   // Launch defaults persistence
   const LAUNCH_DEFAULTS_KEY = "exo-launch-defaults-v2";
@@ -935,7 +935,9 @@
         ? "MlxJaccl"
         : defaults.instanceType === "LlamaCppRpc"
           ? "LlamaCppRpc"
-          : "MlxRing";
+          : defaults.instanceType === "Vllm"
+            ? "Vllm"
+            : "MlxRing";
 
     // Apply minNodes if valid (between 1 and maxNodes)
     if (
@@ -1151,7 +1153,9 @@
   const matchesSelectedRuntime = (runtime: InstanceMeta): boolean =>
     selectedInstanceType === "MlxJaccl"
       ? runtime === "MlxJaccl"
-      : runtime === "MlxRing" || runtime === "LlamaCppRpc";
+      : selectedInstanceType === "Vllm"
+        ? runtime === "Vllm"
+        : runtime === "MlxRing" || runtime === "LlamaCppRpc";
 
   // Helper to check if a model can be launched (has valid placement with >= minNodes)
   function canModelFit(modelId: string): boolean {
@@ -2040,6 +2044,8 @@
     let instanceType = "Unknown";
     if (instanceTag === "MlxRingInstance") instanceType = "MLX Ring";
     else if (instanceTag === "MlxJacclInstance") instanceType = "MLX RDMA";
+    else if (instanceTag === "VllmInstance") instanceType = "vLLM Pipeline";
+    else if (instanceTag === "LlamaCppRpcInstance") instanceType = "llama.cpp RPC";
 
     const inst = instance as {
       shardAssignments?: {
@@ -2692,7 +2698,12 @@
         .sort((a, b) => getPreviewNodeCount(b) - getPreviewNodeCount(a));
       if (jacclTensor.length > 0) return jacclTensor[0];
 
-      // Multi-node without RDMA: fall back to single-node Pipeline/Ring or LlamaCppRpc
+      // Multi-node without RDMA: prefer vLLM pipeline, then LlamaCppRpc/Ring
+      const vllmPipeline = valid.filter(
+        (p) => p.instance_meta === "Vllm" && p.sharding === "Pipeline",
+      ).sort((a, b) => getPreviewNodeCount(b) - getPreviewNodeCount(a));
+      if (vllmPipeline.length > 0) return vllmPipeline[0];
+
       const singlePipeline = valid.filter(
         (p) =>
           (p.instance_meta === "MlxRing" || p.instance_meta === "LlamaCppRpc") &&
@@ -2702,7 +2713,12 @@
       if (singlePipeline.length > 0) return singlePipeline[0];
     }
 
-    // Single node (or final fallback): Pipeline/Ring or LlamaCppRpc with fewest nodes
+    // Single node (or final fallback): vLLM, then Pipeline/Ring or LlamaCppRpc with fewest nodes
+    const vllmSingle = valid.filter(
+      (p) => p.instance_meta === "Vllm" && p.sharding === "Pipeline",
+    ).sort((a, b) => getPreviewNodeCount(a) - getPreviewNodeCount(b));
+    if (vllmSingle.length > 0) return vllmSingle[0];
+
     const ringPipeline = valid
       .filter(
         (p) =>
@@ -5794,6 +5810,29 @@
                           {/if}
                         </span>
                         RDMA (Fast)
+                      </button>
+                      <button
+                        onclick={() => {
+                          selectedInstanceType = "Vllm";
+                          saveLaunchDefaults();
+                        }}
+                        class="flex items-center gap-2 py-1.5 px-3 text-xs font-mono border rounded transition-all duration-200 cursor-pointer {selectedInstanceType ===
+                        'Vllm'
+                          ? 'bg-transparent text-exo-yellow border-exo-yellow'
+                          : 'bg-transparent text-white/70 border-exo-medium-gray/50 hover:border-exo-yellow/50'}"
+                      >
+                        <span
+                          class="w-3 h-3 rounded-full border-2 flex items-center justify-center {selectedInstanceType ===
+                          'Vllm'
+                            ? 'border-exo-yellow'
+                            : 'border-exo-medium-gray'}"
+                        >
+                          {#if selectedInstanceType === "Vllm"}
+                            <span class="w-1.5 h-1.5 rounded-full bg-exo-yellow"
+                            ></span>
+                          {/if}
+                        </span>
+                        vLLM Pipeline
                       </button>
                     </div>
                   </div>
