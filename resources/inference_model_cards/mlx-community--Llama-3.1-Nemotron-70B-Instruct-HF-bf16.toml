@@ -8,5 +8,8 @@ quantization = "bf16"
 base_model = "NVIDIA Llama-3.1-Nemotron-70B-Instruct"
 capabilities = ["text"]
 
+hf_base_model_id = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
+gguf_repo_id = "bartowski/Llama-3.1-Nemotron-70B-Instruct-HF-GGUF"
+gguf_filename = "Llama-3.1-Nemotron-70B-Instruct-HF-Q4_K_M.gguf"
 [storage_size]
 in_bytes = 141107412992

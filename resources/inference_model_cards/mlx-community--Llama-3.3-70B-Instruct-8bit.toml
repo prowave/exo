@@ -9,5 +9,8 @@ quantization = "8bit"
 base_model = "Llama 3.3 70B"
 capabilities = ["text"]
 
+hf_base_model_id = "meta-llama/Llama-3.3-70B-Instruct"
+gguf_repo_id = "bartowski/Llama-3.3-70B-Instruct-GGUF"
+gguf_filename = "Llama-3.3-70B-Instruct-Q4_K_M.gguf"
 [storage_size]
 in_bytes = 76799803392

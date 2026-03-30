@@ -9,5 +9,6 @@ quantization = "8bit"
 base_model = "Qwen3 235B"
 capabilities = ["text", "thinking", "thinking_toggle"]
 
+hf_base_model_id = "Qwen/Qwen3-235B-A22B-Instruct-2507"
 [storage_size]
 in_bytes = 268435456000

@@ -9,5 +9,6 @@ quantization = "4bit"
 base_model = "Qwen3 Coder 480B"
 capabilities = ["text", "code"]
 
+hf_base_model_id = "Qwen/Qwen3-Coder-480B-A35B-Instruct"
 [storage_size]
 in_bytes = 289910292480

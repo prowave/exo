@@ -9,5 +9,6 @@ quantization = "4bit"
 base_model = "Qwen3.5 122B A10B"
 capabilities = ["text", "thinking", "thinking_toggle"]
 
+hf_base_model_id = "Qwen/Qwen3.5-122B-A10B"
 [storage_size]
 in_bytes = 69593314272

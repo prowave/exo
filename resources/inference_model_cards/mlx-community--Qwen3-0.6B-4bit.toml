@@ -9,5 +9,8 @@ quantization = "4bit"
 base_model = "Qwen3 0.6B"
 capabilities = ["text", "thinking", "thinking_toggle"]
 
+hf_base_model_id = "Qwen/Qwen3-0.6B"
+gguf_repo_id = "bartowski/Qwen_Qwen3-0.6B-GGUF"
+gguf_filename = "Qwen_Qwen3-0.6B-Q4_K_M.gguf"
 [storage_size]
 in_bytes = 342884352
