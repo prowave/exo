@@ -108,6 +108,9 @@ class ModelCard(CamelCaseModel):
     # GGUF variant for llama-cpp-python backends (ROCm / Vulkan / CPU on Linux)
     gguf_repo_id: ModelId | None = None
     gguf_filename: str | None = None
+    # Base HuggingFace model ID for vLLM pipeline-parallel backends
+    # e.g. "meta-llama/Meta-Llama-3.1-8B-Instruct" (safetensors, not an MLX fork)
+    hf_base_model_id: ModelId | None = None
 
     @field_validator("tasks", mode="before")
     @classmethod

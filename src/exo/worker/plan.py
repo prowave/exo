@@ -123,6 +123,11 @@ def _model_needs_download(
     }
 
     for runner in runners.values():
+        # VllmInstance runners manage their own model download inside the runner process
+        from exo.shared.types.worker.instances import VllmInstance
+        if isinstance(runner.bound_instance.instance, VllmInstance):
+            continue
+
         model_id = runner.bound_instance.bound_shard.model_card.model_id
         if isinstance(runner.status, RunnerIdle) and (
             model_id not in download_status
@@ -307,9 +312,8 @@ def _pending_tasks(
             # For LlamaCppRpc instances only rank 0 drives generation;
             # rank 1+ are passive RPC workers and must not consume the task.
             from exo.shared.types.worker.instances import LlamaCppRpcInstance
-            if isinstance(runner.bound_instance.instance, LlamaCppRpcInstance):
-                if runner.bound_instance.bound_shard.device_rank != 0:
-                    continue
+            if isinstance(runner.bound_instance.instance, LlamaCppRpcInstance) and runner.bound_instance.bound_shard.device_rank != 0:
+                continue
 
             if isinstance(runner.status, (RunnerReady, RunnerRunning)) and all(
                 isinstance(all_runners[global_runner_id], (RunnerReady, RunnerRunning))

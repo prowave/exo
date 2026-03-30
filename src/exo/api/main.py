@@ -459,11 +459,17 @@ class API:
         all_llamacpp = node_backends <= {"rocm", "vulkan", "cpu"} and not (
             node_backends & {"mlx_metal", "mlx_cuda"}
         )
-        if all_llamacpp and model_card.gguf_filename is not None:
-            instance_combinations.extend(
-                (Sharding.Pipeline, InstanceMeta.LlamaCppRpc, i)
-                for i in range(1, node_count + 1)
-            )
+        if all_llamacpp:
+            if model_card.gguf_filename is not None:
+                instance_combinations.extend(
+                    (Sharding.Pipeline, InstanceMeta.LlamaCppRpc, i)
+                    for i in range(1, node_count + 1)
+                )
+            if model_card.hf_base_model_id is not None or model_card.gguf_filename is not None:
+                instance_combinations.extend(
+                    (Sharding.Pipeline, InstanceMeta.Vllm, i)
+                    for i in range(1, node_count + 1)
+                )
         else:
             for sharding in (Sharding.Pipeline, Sharding.Tensor):
                 for instance_meta in (InstanceMeta.MlxRing, InstanceMeta.MlxJaccl):

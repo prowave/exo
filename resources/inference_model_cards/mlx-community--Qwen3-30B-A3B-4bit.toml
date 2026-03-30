@@ -10,6 +10,7 @@ base_model = "Qwen3 30B"
 capabilities = ["text", "thinking", "thinking_toggle"]
 gguf_repo_id = "bartowski/Qwen3-30B-A3B-GGUF"
 gguf_filename = "Qwen3-30B-A3B-Q4_K_M.gguf"
+hf_base_model_id = "Qwen/Qwen3-30B-A3B"
 
 [storage_size]
 in_bytes = 17612931072

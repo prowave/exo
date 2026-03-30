@@ -16,6 +16,7 @@ class InstanceMeta(str, Enum):
     MlxRing = "MlxRing"
     MlxJaccl = "MlxJaccl"
     LlamaCppRpc = "LlamaCppRpc"
+    Vllm = "Vllm"
 
 
 class BaseInstance(TaggedModel):
@@ -55,8 +56,24 @@ class LlamaCppRpcInstance(BaseInstance):
     n_gpu_layers_per_runner: dict[RunnerId, int]
 
 
+class VllmInstance(BaseInstance):
+    """Instance backed by vLLM with Ray-based pipeline parallelism.
+
+    Each node in the pipeline loads only its assigned layer shard into memory,
+    enabling true distributed memory for models larger than a single node's RAM.
+
+    - Rank 0: starts a Ray head node, then ``vllm serve`` as the coordinator.
+    - Rank 1+: join the Ray cluster as workers; vLLM uses them as pipeline stages.
+    """
+
+    ray_head_address: str  # "ip:port" of the Ray head node (rank 0)
+    ray_port: int
+    vllm_serve_port: int
+    pipeline_parallel_size: int
+
+
 # TODO: Single node instance
-Instance = MlxRingInstance | MlxJacclInstance | LlamaCppRpcInstance
+Instance = MlxRingInstance | MlxJacclInstance | LlamaCppRpcInstance | VllmInstance
 
 
 class BoundInstance(CamelCaseModel):

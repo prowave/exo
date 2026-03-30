@@ -46,6 +46,7 @@ from exo.shared.types.worker.instances import (
     LlamaCppRpcInstance,
     MlxJacclInstance,
     MlxRingInstance,
+    VllmInstance,
 )
 from exo.shared.types.worker.runners import RunnerId
 from exo.shared.types.worker.shards import Sharding
@@ -195,8 +196,8 @@ def place_instance(
     )
 
     # Single-node: force Pipeline/Ring (Tensor and Jaccl require multi-node)
-    # LlamaCppRpc works fine single-node so leave it alone
-    if len(selected_cycle) == 1 and command.instance_meta != InstanceMeta.LlamaCppRpc:
+    # LlamaCppRpc and Vllm work fine single-node so leave them alone
+    if len(selected_cycle) == 1 and command.instance_meta not in (InstanceMeta.LlamaCppRpc, InstanceMeta.Vllm):
         command.instance_meta = InstanceMeta.MlxRing
         command.sharding = Sharding.Pipeline
 
@@ -298,6 +299,34 @@ def place_instance(
                 rpc_port=rpc_port,
                 rpc_addresses=rpc_addresses,
                 n_gpu_layers_per_runner=n_gpu_layers_per_runner,
+            )
+
+        case InstanceMeta.Vllm:
+            ray_port = random_ephemeral_port()
+            vllm_serve_port = random_ephemeral_port()
+            pipeline_parallel_size = len(shard_assignments.runner_to_shard)
+
+            # Find rank-0 node's IP address for the Ray head
+            ray_head_address = "127.0.0.1"
+            rank0_node_id_vllm: NodeId | None = None
+            for node_id in selected_cycle.node_ids:
+                runner_id = shard_assignments.node_to_runner[node_id]
+                if shard_assignments.runner_to_shard[runner_id].device_rank == 0:
+                    rank0_node_id_vllm = node_id
+                    break
+
+            if rank0_node_id_vllm is not None:
+                ifaces = node_network.get(rank0_node_id_vllm)
+                if ifaces and ifaces.interfaces:
+                    ray_head_address = ifaces.interfaces[0].ip_address
+
+            target_instances[instance_id] = VllmInstance(
+                instance_id=instance_id,
+                shard_assignments=shard_assignments,
+                ray_head_address=f"{ray_head_address}:{ray_port}",
+                ray_port=ray_port,
+                vllm_serve_port=vllm_serve_port,
+                pipeline_parallel_size=pipeline_parallel_size,
             )
 
     return target_instances

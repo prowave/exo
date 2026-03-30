@@ -5,7 +5,11 @@ import loguru
 
 from exo.shared.types.events import Event, RunnerStatusUpdated
 from exo.shared.types.tasks import Task, TaskId
-from exo.shared.types.worker.instances import BoundInstance, LlamaCppRpcInstance
+from exo.shared.types.worker.instances import (
+    BoundInstance,
+    LlamaCppRpcInstance,
+    VllmInstance,
+)
 from exo.shared.types.worker.runners import RunnerFailed
 from exo.utils.backend import detect_backend
 from exo.utils.channels import ClosedResourceError, MpReceiver, MpSender
@@ -29,6 +33,7 @@ def entrypoint(
 
     backend = detect_backend()
     use_llamacpp = isinstance(bound_instance.instance, LlamaCppRpcInstance)
+    use_vllm = isinstance(bound_instance.instance, VllmInstance)
 
     if not use_llamacpp:
         # Only set MLX Metal flags when we're actually going to use MLX
@@ -39,7 +44,7 @@ def entrypoint(
             os.environ["MLX_METAL_FAST_SYNCH"] = "0"
         logger.info(f"Fast synch flag: {os.environ['MLX_METAL_FAST_SYNCH']}")
 
-    logger.info(f"Detected backend: {backend}, using llama-cpp: {use_llamacpp}")
+    logger.info(f"Detected backend: {backend}, using llama-cpp: {use_llamacpp}, using vllm: {use_vllm}")
 
     # Import main after setting global logger - this lets us just import logger from this module
     try:
@@ -47,6 +52,13 @@ def entrypoint(
             from exo.worker.runner.image_models.runner import Runner as ImageRunner
 
             runner = ImageRunner(
+                bound_instance, event_sender, task_receiver, cancel_receiver
+            )
+            runner.main()
+        elif use_vllm:
+            from exo.worker.runner.llm_inference.runner_vllm import VllmRunner
+
+            runner = VllmRunner(
                 bound_instance, event_sender, task_receiver, cancel_receiver
             )
             runner.main()
