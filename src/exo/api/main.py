@@ -460,14 +460,16 @@ class API:
             node_backends & {"mlx_metal", "mlx_cuda"}
         )
         if all_llamacpp:
+            # Prefer vLLM for true pipeline-parallel memory distribution across nodes.
+            # Fall back to LlamaCppRpc when no HF base model is available.
+            if model_card.hf_base_model_id is not None:
+                instance_combinations.extend(
+                    (Sharding.Pipeline, InstanceMeta.Vllm, i)
+                    for i in range(1, node_count + 1)
+                )
             if model_card.gguf_filename is not None:
                 instance_combinations.extend(
                     (Sharding.Pipeline, InstanceMeta.LlamaCppRpc, i)
-                    for i in range(1, node_count + 1)
-                )
-            if model_card.hf_base_model_id is not None or model_card.gguf_filename is not None:
-                instance_combinations.extend(
-                    (Sharding.Pipeline, InstanceMeta.Vllm, i)
                     for i in range(1, node_count + 1)
                 )
         else:

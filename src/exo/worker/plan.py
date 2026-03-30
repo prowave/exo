@@ -205,17 +205,21 @@ def _load_model(
         instance = runner.bound_instance.instance
         shard_assignments = instance.shard_assignments
 
-        all_local_downloads_complete = all(
-            nid in global_download_status
-            and any(
-                isinstance(dp, DownloadCompleted)
-                and dp.shard_metadata.model_card.model_id == shard_assignments.model_id
-                for dp in global_download_status[nid]
+        # VllmInstance manages its own model download inside the runner process;
+        # skip the exo download-completion gate entirely for those instances.
+        from exo.shared.types.worker.instances import VllmInstance
+        if not isinstance(instance, VllmInstance):
+            all_local_downloads_complete = all(
+                nid in global_download_status
+                and any(
+                    isinstance(dp, DownloadCompleted)
+                    and dp.shard_metadata.model_card.model_id == shard_assignments.model_id
+                    for dp in global_download_status[nid]
+                )
+                for nid in shard_assignments.node_to_runner
             )
-            for nid in shard_assignments.node_to_runner
-        )
-        if not all_local_downloads_complete:
-            continue
+            if not all_local_downloads_complete:
+                continue
 
         is_single_node_instance = len(instance.shard_assignments.runner_to_shard) == 1
         if is_single_node_instance and isinstance(runner.status, RunnerIdle):
