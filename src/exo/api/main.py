@@ -501,6 +501,9 @@ class API:
                     download_status=self.state.downloads,
                 )
             except ValueError as exc:
+                logger.debug(
+                    f"Placement failed for {instance_meta}/{sharding}/min_nodes={min_nodes}: {exc}"
+                )
                 if (model_card.model_id, sharding, instance_meta, 0) not in seen:
                     previews.append(
                         PlacementPreview(
