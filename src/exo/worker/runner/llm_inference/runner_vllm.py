@@ -11,9 +11,11 @@ Architecture:
 """
 
 import contextlib
+import os
 import subprocess
+import tempfile
 import time
-from typing import Literal
+from typing import IO, Literal
 
 import httpx
 from loguru import logger
@@ -85,6 +87,7 @@ class VllmRunner:
 
         self._ray_proc: subprocess.Popen[bytes] | None = None
         self._vllm_proc: subprocess.Popen[bytes] | None = None
+        self._vllm_log: "IO[bytes] | None" = None
         self._cancelled_tasks: set[TaskId] = set()
         self.seen: set[TaskId] = set()
 
@@ -254,13 +257,15 @@ class VllmRunner:
             "--pipeline-parallel-size", str(pipeline_parallel_size),
             "--tensor-parallel-size", "1",
             "--trust-remote-code",
-            "--disable-log-requests",
         ]
 
+        log_path = os.path.join(tempfile.gettempdir(), f"vllm_rank{self.device_rank}.log")
+        logger.info(f"vllm serve logs → {log_path}")
+        self._vllm_log = open(log_path, "wb")  # noqa: SIM115
         self._vllm_proc = subprocess.Popen(
             cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=self._vllm_log,
+            stderr=self._vllm_log,
         )
 
         # Wait for vLLM to be ready
@@ -374,6 +379,7 @@ class VllmRunner:
         ]
         stop_strings = list(dict.fromkeys(list(params.stop or []) + eot_stop_strings))
         payload["stop"] = stop_strings
+        logger.debug(f"vllm generation payload stop={stop_strings}")
 
         try:
             with httpx.Client(timeout=None) as client, client.stream(
@@ -459,6 +465,10 @@ class VllmRunner:
         # Also stop Ray via CLI to ensure clean teardown
         with contextlib.suppress(Exception):
             subprocess.run(["ray", "stop", "--force"], timeout=10, check=False)
+
+        if self._vllm_log is not None:
+            with contextlib.suppress(Exception):
+                self._vllm_log.close()
 
         self.send_task_status(task.task_id, TaskStatus.Complete)
         self.update_status(RunnerShutdown())
